@@ -6,7 +6,7 @@ import { FaMicrophone } from 'react-icons/fa';
 import { useTheme } from 'next-themes'
 import Loading from './loading';
 
-const TodoListHeader = () => {
+const page = () => {
   const [todos, setTodos] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [browserSupportsRecognition, setBrowserSupportsRecognition] = useState(false);
@@ -85,13 +85,18 @@ const TodoListHeader = () => {
             <button onClick={handleAddTodo} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded">
               Add
             </button>
-            <p>Microphone: {listening ? 'on' : 'off'}</p>
             <button
               className={`flex items-center justify-center h-8 w-8 rounded-full bg-gray-300 focus:bg-gray-300 ml-2`}
-              onClick={SpeechRecognition.startListening}
+              onClick={() => {
+                if (listening) {
+                  SpeechRecognition.stopListening();
+                } else {
+                  SpeechRecognition.startListening();
+                }
+              }}
             >
               <span className="sr-only">Add todo with voice</span>
-              <FaMicrophone className={`h-6 w-6 text-black`} />
+              <FaMicrophone className={`h-6 w-6 ${listening ? 'text-red-500' : 'text-green-500'}`} />
             </button>
           </form>
         ) : null}
@@ -123,4 +128,4 @@ const TodoListHeader = () => {
   );
 };
 
-export default TodoListHeader;
+export default page;
