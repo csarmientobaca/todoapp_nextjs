@@ -95,7 +95,6 @@ const page = () => {
                 }
               }}
             >
-              <span className="sr-only">Add todo with voice</span>
               <FaMicrophone className={`h-6 w-6 ${listening ? 'text-red-500' : 'text-green-500'}`} />
             </button>
           </form>
@@ -105,7 +104,7 @@ const page = () => {
 
         <ul className="mt-4">
           {todos.map((todo, index) => (
-            <li key={index} className="flex items-center justify-between py-2 px-4 bg-gray-100 rounded mt-2">
+            <li key={index} className="flex items-center justify-between py-2 px-4 bg-gray-100 text-black rounded mt-2">
               <span style={{ wordBreak: 'break-all' }}>
                 {splitTodo(todo).map((substring, i) => (
                   <React.Fragment key={i}>
