@@ -3,8 +3,20 @@ import 'regenerator-runtime/runtime'
 import React, { useState, useEffect } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FaMicrophone } from 'react-icons/fa';
-import { useTheme } from 'next-themes'
 import Loading from './loading';
+
+import { auth, db } from "./firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import {
+  addDoc,
+  collection,
+  doc,
+  deleteDoc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
 
 const page = () => {
   const [todos, setTodos] = useState([]);
@@ -18,6 +30,8 @@ const page = () => {
     browserSupportsSpeechRecognition
   } = useSpeechRecognition();
 
+  const [user] = useAuthState(auth);
+
   useEffect(() => {
     const load = async () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -27,8 +41,6 @@ const page = () => {
     setBrowserSupportsRecognition(browserSupportsSpeechRecognition);
   }, [browserSupportsSpeechRecognition]);
 
-
-
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
   };
@@ -36,22 +48,33 @@ const page = () => {
   const handleFormSubmit = (event) => {
     event.preventDefault();
     if (inputValue.trim() !== '') {
-      setTodos([...todos, inputValue]);
+      addTodoToFirestore(inputValue);
       setInputValue('');
     }
   };
 
   const handleAddTodo = () => {
     if (transcript.trim() !== '') {
-      setTodos([...todos, transcript]);
+      addTodoToFirestore(transcript);
       resetTranscript();
     } else if (inputValue.trim() !== '') {
-      setTodos([...todos, inputValue]);
+      addTodoToFirestore(inputValue);
       setInputValue('');
     }
   };
 
-  const handleDeleteTodo = (index) => {
+  const handleDeleteTodo = async (index) => {
+    const todoToDelete = todos[index];
+
+    // Delete the todo item from Firestore
+    try {
+      await deleteDoc(doc(db, `user/${user?.uid}/todos/${todoToDelete.id}`));
+      alert("Todo Deleted");
+    } catch (error) {
+      alert("Error deleting todo: " + error.message);
+    }
+
+    // Update the local state to reflect the deletion
     const newTodos = [...todos];
     newTodos.splice(index, 1);
     setTodos(newTodos);
@@ -62,6 +85,32 @@ const page = () => {
     return todo.match(regex);
   };
 
+  const addTodoToFirestore = (todoText) => {
+    addDoc(collection(db, `user/${user?.uid}/todos`), {
+      todoName: todoText,
+      status: false,
+      time: serverTimestamp(),
+    })
+      .then(() => alert("Todo Added"))
+      .catch((err) => alert(err.message));
+  };
+
+  useEffect(() => {
+    onSnapshot(
+      query(collection(db, `user/${user?.uid}/todos`), orderBy("time", "desc")),
+      (snapshot) => {
+        setTodos(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            todoName: doc.data().todoName,
+            time: doc.data().time,
+            status: doc.data().status,
+          }))
+        );
+      }
+    );
+  }, [user]);
+
   return (
     <>
       <div className="mx-auto" style={{ maxWidth: '600px' }}>
@@ -70,8 +119,6 @@ const page = () => {
         ) : browserSupportsRecognition ? null : (
           <span>Browser doesn't support speech recognition.</span>
         )}
-
-
 
         {!isLoading ? (
           <form onSubmit={handleFormSubmit} className="flex items-center justify-between py-2 px-4 bg-gray-200 rounded">
@@ -100,22 +147,17 @@ const page = () => {
           </form>
         ) : null}
 
-
-
         <ul className="mt-4">
           {todos.map((todo, index) => (
             <li key={index} className="flex items-center justify-between py-2 px-4 bg-gray-100 text-black rounded mt-2">
               <span style={{ wordBreak: 'break-all' }}>
-                {splitTodo(todo).map((substring, i) => (
+                {splitTodo(todo.todoName).map((substring, i) => (
                   <React.Fragment key={i}>
                     {substring}
                     <br />
                   </React.Fragment>
                 ))}
               </span>
-
-
-
               <button onClick={() => handleDeleteTodo(index)} className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded">
                 Delete
               </button>
